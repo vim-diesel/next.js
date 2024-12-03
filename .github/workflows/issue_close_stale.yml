@@ -1,4 +1,4 @@
-name: 'Close Stale Issues'
+name: 'Close stale issues'
 on:
   workflow_dispatch:
   schedule:
