@@ -1,6 +1,6 @@
 {
   "private": true,
-  "description": "Notify Next.js team about pending PRs and popular issues",
+  "description": "A variety of functions to help with triaging issues, PRs, and feature requests in the Next.js repo.",
   "scripts": {
     "build": "pnpm build-issues-by-version && pnpm build-issues && pnpm build-prs && pnpm build-feature-requests && pnpm build-bankrupt-issues && pnpm build-triage-issues-with-ai",
     "build-issues-by-version": "ncc build src/issues-by-version.ts -m -o dist/issues-by-version --license licenses.txt",
@@ -15,12 +15,12 @@
     "@actions/exec": "^1.1.1",
     "@actions/github": "6.0.0",
     "@ai-sdk/openai": "^0.0.67",
-    "@slack/web-api": "^7.6.0",
+    "@slack/web-api": "^7.7.0",
     "ai": "^3.4.14",
     "slack-block-builder": "^2.8.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.2"
+    "@vercel/ncc": "^0.38.3"
   }
 }
