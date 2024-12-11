@@ -968,10 +968,21 @@ impl PageEndpoint {
                     .await?
                     .is_production()
                 {
+                    let loadable_manifest_output =
+                        self.react_loadable_manifest(*dynamic_import_entries, NextRuntime::NodeJs);
+
                     ResolvedVc::cell(Some(ResolvedVc::upcast(
-                        NftJsonAsset::new(this.pages_project.project(), *ssr_entry_chunk, vec![])
-                            .to_resolved()
-                            .await?,
+                        NftJsonAsset::new(
+                            this.pages_project.project(),
+                            *ssr_entry_chunk,
+                            loadable_manifest_output
+                                .await?
+                                .iter()
+                                .map(|m| **m)
+                                .collect(),
+                        )
+                        .to_resolved()
+                        .await?,
                     )))
                 } else {
                     ResolvedVc::cell(None)

@@ -1366,7 +1366,7 @@ impl AppEndpoint {
                 // For node, there will be exactly one asset in this
                 let rsc_chunk = *app_entry_chunks_ref.first().unwrap();
 
-                if emit_manifests {
+                let loadable_manifest_output = if emit_manifests {
                     // create app paths manifest
                     let app_paths_manifest_output = create_app_paths_manifest(
                         node_root,
@@ -1409,9 +1409,13 @@ impl AppEndpoint {
                             .into(),
                         ),
                         NextRuntime::NodeJs,
-                    );
-                    server_assets.extend(loadable_manifest_output.await?.iter().copied());
-                }
+                    )
+                    .await?;
+                    server_assets.extend(loadable_manifest_output.iter().copied());
+                    Some(loadable_manifest_output)
+                } else {
+                    None
+                };
 
                 if this
                     .app_project
@@ -1424,7 +1428,12 @@ impl AppEndpoint {
                         NftJsonAsset::new(
                             this.app_project.project(),
                             *rsc_chunk,
-                            client_reference_manifest.iter().map(|m| **m).collect(),
+                            client_reference_manifest
+                                .iter()
+                                .copied()
+                                .chain(loadable_manifest_output.iter().flat_map(|m| &**m).copied())
+                                .map(|m| *m)
+                                .collect(),
                         )
                         .to_resolved()
                         .await?,
