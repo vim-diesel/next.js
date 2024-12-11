@@ -128,8 +128,8 @@ pub struct DynamicImportEntries(
 pub async fn map_next_dynamic(graph: Vc<SingleModuleGraph>) -> Result<Vc<DynamicImportEntries>> {
     let actions = graph
         .await?
-        .enumerate_nodes()
-        .map(|(_, node)| async move {
+        .iter_nodes()
+        .map(|node| async move {
             let module = node.module;
             let layer = node.layer.as_ref();
             if layer.is_some_and(|layer| &**layer == "app-client" || &**layer == "client") {

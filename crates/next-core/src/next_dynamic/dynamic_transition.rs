@@ -12,7 +12,7 @@ use turbopack_ecmascript::chunk::EcmascriptChunkPlaceable;
 use super::NextDynamicEntryModule;
 
 /// This transition is used to create the marker asset for a next/dynamic
-/// import.
+/// import. Optionally, it can also apply another transition (i.e. to the client context).
 ///
 /// This will get picked up during module processing and will be used to
 /// create the dynamic entry, and the dynamic manifest entry.
@@ -23,6 +23,7 @@ pub struct NextDynamicTransition {
 
 #[turbo_tasks::value_impl]
 impl NextDynamicTransition {
+    /// Create a transition that only add a marker `NextDynamicEntryModule`.
     #[turbo_tasks::function]
     pub fn new_marker() -> Vc<Self> {
         NextDynamicTransition {
@@ -30,6 +31,9 @@ impl NextDynamicTransition {
         }
         .cell()
     }
+
+    /// Create a transition that applies `client_transiton` and adds a marker
+    /// `NextDynamicEntryModule`.
     #[turbo_tasks::function]
     pub fn new_client(client_transition: ResolvedVc<Box<dyn Transition>>) -> Vc<Self> {
         NextDynamicTransition {

@@ -72,11 +72,9 @@ pub enum NextDynamicMode {
     /// the React Loadable Webpack plugin.
     Webpack,
     /// In Turbopack mode:
-    /// * in development, each `dynamic()` call will generate a key containing both the imported
-    ///   module id and the chunks it needs. This removes the need for a manifest entry
-    /// * during build, each `dynamic()` call will import the module through the given transition,
-    ///   which takes care of adding an entry to the manifest and returning an asset that exports
-    ///   the entry's key.
+    /// * each dynamic import is amended with a transition to `dynamic_transition_name`
+    /// * the ident of the client module (via `dynamic_client_transition_name`) is added to the
+    ///   metadata
     Turbopack {
         dynamic_client_transition_name: String,
         dynamic_transition_name: String,
@@ -247,12 +245,9 @@ impl Fold for NextDynamicPatcher {
                             }
 
                             NextDynamicPatcherState::Turbopack { imports, .. } => {
-                                //     loadableGenerated: {
-                                //     modules: [
-                                //         "[project]/test/e2e/app-dir/dynamic/app/dynamic/
-                                // async-client/client.js [app-client] (ecmascript, next/dynamic
-                                // entry)"     ]
-                                // }
+                                // loadableGenerated: { modules: [
+                                // ".../client.js [app-client] (ecmascript, next/dynamic entry)"
+                                // ]}
                                 let id_ident =
                                     private_ident!(dynamically_imported_specifier_span, "id");
 
@@ -373,6 +368,7 @@ impl Fold for NextDynamicPatcher {
                             dynamic_transition_name,
                             ..
                         } => {
+                            // Add `{with:{turbopack-transition: ...}}` to the dynamic import
                             let mut visitor = DynamicImportTransitionAdder {
                                 transition_name: dynamic_transition_name,
                             };
@@ -403,6 +399,7 @@ impl Fold for NextDynamicPatcher {
 struct DynamicImportTransitionAdder<'a> {
     transition_name: &'a str,
 }
+// Add `{with:{turbopack-transition: <self.transition_name>}}` to any dynamic imports
 impl VisitMut for DynamicImportTransitionAdder<'_> {
     fn visit_mut_call_expr(&mut self, expr: &mut CallExpr) {
         if let Callee::Import(..) = &expr.callee {
@@ -501,8 +498,6 @@ impl NextDynamicPatcher {
                         })],
                         src: Box::new(specifier.into()),
                         type_only: false,
-                        // The transition should make sure the imported module ends up in the
-                        // dynamic manifest.
                         with: Some(with_transition_chunking_type(
                             dynamic_client_transition_name,
                             "none",
@@ -511,37 +506,6 @@ impl NextDynamicPatcher {
                     })));
                 }
             }
-            // TurbopackImport::BuildId {
-            //     id_ident,
-            //     specifier,
-            // } => {
-            //     // Turbopack will automatically transform the imported `__turbopack_module_id__`
-            //     // identifier into the imported module's id.
-            //     new_items.push(ModuleItem::ModuleDecl(ModuleDecl::Import(ImportDecl {
-            //         span: DUMMY_SP,
-            //         specifiers: vec![ImportSpecifier::Named(ImportNamedSpecifier {
-            //             span: DUMMY_SP,
-            //             local: id_ident,
-            //             imported: Some(
-            //                 Ident::new(
-            //                     "__turbopack_module_id__".into(),
-            //                     DUMMY_SP,
-            //                     Default::default(),
-            //                 )
-            //                 .into(),
-            //             ),
-            //             is_type_only: false,
-            //         })],
-            //         src: Box::new(specifier.into()),
-            //         type_only: false,
-            //         // We don't want this import to cause the imported module to be considered
-
-            //         // for chunking through this import; we only need
-            //         // the module id.
-            //         with: Some(with_chunking_type("none")),
-            //         phase: Default::default(),
-            //     })));
-            // }
         }
 
         new_items.append(items);
@@ -602,10 +566,6 @@ fn rel_filename(base: Option<&Path>, file: &FileName) -> String {
 
     rel_path.display().to_string()
 }
-
-// fn with_chunking_type(chunking_type: &str) -> Box<ObjectLit> {
-//     with_clause(&[("turbopack-chunking-type", chunking_type)])
-// }
 
 fn with_transition(transition_name: &str) -> ObjectLit {
     with_clause(&[("turbopack-transition", transition_name)])
